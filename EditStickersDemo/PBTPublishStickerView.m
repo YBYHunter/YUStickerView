@@ -49,18 +49,12 @@
         self.stickerBorderView.frame = CGRectInset(self.stickerImageView.bounds, PBTPResizableViewGlobalInset, PBTPResizableViewGlobalInset);
         [self.stickerBorderView setNeedsDisplay];
         
-        CGFloat halfButtonWidth = 45;
+        CGFloat halfButtonWidth = 24;
         self.resizeImageView.frame = CGRectMake(self.stickerBorderView.center.x + self.stickerBorderView.bounds.size.width / 2 - halfButtonWidth/2, self.stickerBorderView.center.y + self.stickerBorderView.bounds.size.height / 2 - halfButtonWidth/2, halfButtonWidth, halfButtonWidth);
         
         self.deleteImageView.frame = CGRectMake(self.stickerBorderView.center.x - self.stickerBorderView.bounds.size.width / 2 - halfButtonWidth/2, self.stickerBorderView.center.y - self.stickerBorderView.bounds.size.height / 2 - halfButtonWidth/2, halfButtonWidth, halfButtonWidth);
         
         [self addAllGestures];
-        
-//        UIPanGestureRecognizer *panGesture = [NSKeyedUnarchiver unarchiveObjectWithData:[[NSUserDefaults standardUserDefaults] objectForKey:@"userinfoDic"]];
-//        [self.stickerImageView addGestureRecognizer:panGesture];
-//        NSLog(@"asd");
-//        [self handleMove:panGesture];
-        
     }
     return self;
 }
@@ -70,7 +64,9 @@
 #pragma mark - Public Method
 
 - (void)updateStickerWithImage:(UIImage *)image {
+    
     self.stickerImageView.image = image;
+    [self updateControlView];
 }
 
 - (void)showEditState {
@@ -166,7 +162,9 @@
         if (_currntEditStateHidden) {
             return;
         }
-        [self removeFromSuperview];
+        if ([self.stickerViewDelegate respondsToSelector:@selector(stickerView:deleteSticker:)]) {
+            [self.stickerViewDelegate stickerView:self deleteSticker:self.stickerImageView];
+        }
     }
 }
 
@@ -184,10 +182,7 @@
     
     [self setCenter:targetPoint];
     [gesture setTranslation:CGPointZero inView:[self superview]];
-    
-    NSData *data = [NSKeyedArchiver archivedDataWithRootObject:gesture];
-    [[NSUserDefaults standardUserDefaults] setObject:data forKey:@"userinfoDic"];
-    [[NSUserDefaults standardUserDefaults] synchronize];
+    [self sendNotificationWithDelegate:gesture];
 }
 
 //放大
@@ -207,6 +202,7 @@
     gesture.scale = 1;
     
     [self updateControlView];
+    [self sendNotificationWithDelegate:gesture];
 }
 
 //旋转
@@ -218,6 +214,7 @@
     gesture.rotation = 0;
     
     [self updateControlView];
+    [self sendNotificationWithDelegate:gesture];
 }
 
 //单指拖拽
@@ -233,25 +230,39 @@
     } else if (scale * currentScale >= kStickerMaxScale) {
         scale = kStickerMaxScale / currentScale;
     }
-    
     self.stickerImageView.transform = CGAffineTransformScale(self.stickerImageView.transform, scale, scale);
     self.stickerImageView.transform = CGAffineTransformRotate(self.stickerImageView.transform, gesture.rotation);
     [gesture reset];
     
     [self updateControlView];
+    [self sendNotificationWithDelegate:gesture];
 }
 
+//回调通知
+- (void)sendNotificationWithDelegate:(UIGestureRecognizer *)gestureRecognizer {
+    if (gestureRecognizer.state == UIGestureRecognizerStateBegan) {
+    }
+    else if (gestureRecognizer.state == UIGestureRecognizerStateChanged) {
+        if ([self.stickerViewDelegate respondsToSelector:@selector(stickerView:touchesMoved:)]) {
+            [self.stickerViewDelegate stickerView:self touchesMoved:self.stickerImageView];
+        }
+    }
+    else if (gestureRecognizer.state == UIGestureRecognizerStateEnded || gestureRecognizer.state == UIGestureRecognizerStateCancelled) {
+        if ([self.stickerViewDelegate respondsToSelector:@selector(stickerView:touchesEnded:)]) {
+            [self.stickerViewDelegate stickerView:self touchesEnded:self.stickerImageView];
+        }
+    }
+}
 
 #pragma mark - UIGestureRecognizerDelegate
 
-//解决收拾冲突
+//解决手势冲突 旋转和放大同时生效
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
-    if ([otherGestureRecognizer isKindOfClass:[UIPinchGestureRecognizer class]] ||
-        [otherGestureRecognizer isKindOfClass:[UIRotationGestureRecognizer class]] ||
-        [gestureRecognizer isKindOfClass:[UIRotationGestureRecognizer class]] ||
+    if ([otherGestureRecognizer isKindOfClass:[UIRotationGestureRecognizer class]] ||
         [gestureRecognizer isKindOfClass:[UIRotationGestureRecognizer class]]) {
         return YES;
-    } else {
+    }
+    else {
         return NO;
     }
 }
@@ -284,7 +295,7 @@
 - (UIImageView *)resizeImageView {
     if (_resizeImageView == nil) {
         _resizeImageView = [[UIImageView alloc] init];
-        _resizeImageView.backgroundColor = [UIColor lightGrayColor];
+        _resizeImageView.backgroundColor = [UIColor blackColor];
     }
     return _resizeImageView;
 }
@@ -300,7 +311,7 @@
 - (UIImageView *)stickerImageView {
     if (_stickerImageView == nil) {
         _stickerImageView = [[UIImageView alloc] init];
-        _stickerImageView.backgroundColor = [UIColor blueColor];
+        _stickerImageView.backgroundColor = [UIColor clearColor];
         _stickerImageView.userInteractionEnabled = YES;
     }
     return _stickerImageView;
@@ -314,11 +325,9 @@
     return _stickerBorderView;
 }
 
-- (PBTPublishStickerModel *)stickerModel {
-    if (_stickerModel == nil) {
-        _stickerModel = [[PBTPublishStickerModel alloc] init];
-    }
-    return _stickerModel;
+
+- (void)dealloc {
+    NSLog(@"%@-dealloc",[self class]);
 }
 
 

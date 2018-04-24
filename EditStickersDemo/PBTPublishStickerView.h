@@ -13,6 +13,12 @@
 
 - (void)stickerView:(PBTPublishStickerView *)stickerView handleTap:(UIImageView *)stickerImageView;
 
+- (void)stickerView:(PBTPublishStickerView *)stickerView touchesMoved:(UIImageView *)stickerImageView;
+
+- (void)stickerView:(PBTPublishStickerView *)stickerView touchesEnded:(UIImageView *)stickerImageView;
+
+- (void)stickerView:(PBTPublishStickerView *)stickerView deleteSticker:(UIImageView *)stickerImageView;
+
 @end
 
 @interface PBTPublishStickerView : UIView
@@ -46,14 +52,6 @@
  */
 - (void)hideEditState;
 
-
-
-
-
-//时间戳
-//贴纸中心点
-//角度
-//放大
 
 
 
